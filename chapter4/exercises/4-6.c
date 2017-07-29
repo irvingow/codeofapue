@@ -3,6 +3,11 @@
 
 #define BUFSIZE 4096
 
+
+
+/* Please notice that the codes can only be tested in linux os.
+ * in addition, if you use gcc for compiling, you need to add argument '-D_GNU_SOURCE' to support SEEK_DATA and SEEK_HOLE
+ * */
 int main(int argc, char **argv)
 {
     if(argc != 3)
@@ -18,14 +23,20 @@ int main(int argc, char **argv)
         err_sys("open target file error");
 
     off_t currentPosition = 0, holePosition = 0;
+	/* in fact, the most important part of the function is four lines of codes below
+	 * first, we must set the currentPosition at the start of the DATA block
+	 * second, we need to set the offset of the targetfile same as currentPosition to reserve hole in source file 
+	 * third, similar to first line, we should set the holePosition at the start of the HOLE block 
+	 * last, we need the set the offset to currentPosition because in second line, we change the offset of the source file 
+	 *  */
     currentPosition = lseek(sourcefd, 0, SEEK_DATA);
     lseek(targetfd, currentPosition, SEEK_SET);
     holePosition = lseek(sourcefd, currentPosition, SEEK_HOLE);
     lseek(sourcefd, currentPosition, SEEK_SET);
+	/* copyFlag is used to signify whether copying data has completed or not */
     int copyFlag = 1;
     int numToCopy = 0;
     char buf[BUFSIZE];
-    int temp;
     while(currentPosition < holePosition)
     {
         if(copyFlag)
@@ -39,9 +50,9 @@ int main(int argc, char **argv)
             {
                 copyFlag = 0;
             }
-            if((temp = read(sourcefd, buf, numToCopy)) != numToCopy)
+            if(read(sourcefd, buf, numToCopy) != numToCopy)
                 err_sys("read error");
-            if((temp = write(targetfd, buf, numToCopy)) != numToCopy)
+            if(write(targetfd, buf, numToCopy) != numToCopy)
                 err_sys("read error");
             currentPosition += numToCopy;
         }
